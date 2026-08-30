@@ -1,0 +1,16 @@
+{
+  "name": "Idle Tycoon — אימפריית הבנק",
+  "short_name": "Idle Tycoon",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#a6e2f0",
+  "theme_color": "#1c2436",
+  "dir": "rtl",
+  "lang": "he",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
