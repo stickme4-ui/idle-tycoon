@@ -1,0 +1,7 @@
+alpaca-py>=0.45
+anthropic>=2.8
+fastapi>=0.115
+uvicorn[standard]>=0.30
+tzdata
+pytest>=8
+httpx>=0.27

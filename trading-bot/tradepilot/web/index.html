@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TradePilot</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="logo">◆</span> TradePilot
+    <span id="badge-broker" class="badge">…</span>
+    <span id="badge-market" class="badge muted">…</span>
+  </div>
+  <div class="clock"><span id="ny-time">--</span> <small>שעון ניו יורק</small></div>
+  <div class="money">
+    <div><small>הון</small><b id="equity">--</b></div>
+    <div><small>רווח/הפסד היום</small><b id="daypnl">--</b></div>
+  </div>
+  <div class="controls">
+    <div class="mode" role="group" aria-label="מצב מסחר">
+      <button id="mode-manual" class="seg">ידני</button>
+      <button id="mode-auto" class="seg">אוטומטי</button>
+    </div>
+    <button id="btn-kill" class="danger">עצירת חירום</button>
+    <button id="btn-settings" class="ghost" title="הגדרות">⚙</button>
+  </div>
+</header>
+
+<div id="banners"></div>
+
+<main class="grid">
+  <section class="col-main">
+    <div class="section-head">
+      <h2>הצעות מסחר</h2>
+      <div class="filters">
+        <label><input type="checkbox" id="show-done"> הצג גם סגורות ודחויות</label>
+      </div>
+    </div>
+    <div id="proposals" class="cards"></div>
+    <div id="empty" class="empty">
+      <p>אין עדיין הצעות להיום.</p>
+      <p class="muted">אסטרטגיית הפתיחה סורקת את השוק 5 דקות אחרי הפתיחה (9:35 בניו יורק, 16:35 בישראל). הצעות חדשות מבוססות חדשות יכולות להופיע לאורך היום.</p>
+    </div>
+  </section>
+
+  <aside class="col-side">
+    <div class="panel">
+      <h3>פוזיציות פתוחות</h3>
+      <div id="positions" class="muted">אין</div>
+    </div>
+    <div class="panel">
+      <h3>ניהול סיכונים היום</h3>
+      <div id="risk"></div>
+    </div>
+    <div class="panel">
+      <h3>מצב השוק</h3>
+      <div id="regime"></div>
+    </div>
+    <div class="panel">
+      <h3>Claude</h3>
+      <div id="ai"></div>
+    </div>
+    <div class="panel" id="demo-panel" hidden>
+      <h3>שליטה בדמו</h3>
+      <p class="muted small">שוק מדומה עם מניות בדויות. שום דבר כאן אינו נתון אמיתי.</p>
+      <label>מהירות: <input id="demo-speed" type="range" min="5" max="600" step="5" value="60"> <span id="demo-speed-v">60</span>×</label>
+      <button id="demo-pause" class="ghost small">השהה</button>
+    </div>
+    <div class="panel">
+      <h3>חדשות אחרונות</h3>
+      <div id="news" class="list"></div>
+    </div>
+    <div class="panel">
+      <h3>סריקת פתיחה (נפח יחסי)</h3>
+      <div id="scan" class="list"></div>
+    </div>
+    <div class="panel">
+      <h3>יומן פעולות</h3>
+      <div id="events" class="list log"></div>
+    </div>
+    <div class="panel">
+      <h3>סטטיסטיקה מצטברת</h3>
+      <div id="stats"></div>
+    </div>
+  </aside>
+</main>
+
+<dialog id="dlg-settings">
+  <form method="dialog" id="settings-form">
+    <h2>הגדרות</h2>
+    <p class="muted small">המגבלות חלות על כל הזמנה חדשה, בכל מצב. פוזיציות פתוחות שומרות על הסטופ שלהן אצל הברוקר.</p>
+    <fieldset><legend>סיכון</legend>
+      <label>סיכון לעסקה (% מההון) <input name="risk.risk_per_trade_pct" type="number" step="0.1" min="0.05" max="2"></label>
+      <label>סיכון מקסימלי לעסקה ($) <input name="risk.max_risk_per_trade_usd" type="number" step="5" min="1"></label>
+      <label>הפסד יומי מקסימלי ($) <input name="risk.max_daily_loss_usd" type="number" step="10" min="1"></label>
+      <label>הפסד יומי מקסימלי (%) <input name="risk.max_daily_loss_pct" type="number" step="0.1" min="0.1" max="10"></label>
+      <label>עסקאות ביום (מקסימום) <input name="risk.max_trades_per_day" type="number" min="1" max="50"></label>
+      <label>פוזיציות פתוחות (מקסימום) <input name="risk.max_open_positions" type="number" min="1" max="20"></label>
+      <label>גודל פוזיציה (% מההון) <input name="risk.max_position_pct" type="number" min="1" max="100"></label>
+      <label>הפסדים ברצף עד עצירה <input name="risk.max_consecutive_losses" type="number" min="1" max="20"></label>
+      <label class="row"><input name="risk.allow_short" type="checkbox"> לאפשר שורט (מכירה בחסר)</label>
+      <label class="row"><input name="risk.pdt_guard" type="checkbox"> הגנת PDT (חשבון מתחת ל-25,000$)</label>
+    </fieldset>
+    <fieldset><legend>אסטרטגיית פתיחה (ORB)</legend>
+      <label>כמה מניות לסחור (Top N לפי נפח יחסי) <input name="orb.top_n" type="number" min="1" max="50"></label>
+      <label>נפח יחסי מינימלי <input name="orb.min_rvol" type="number" step="0.1" min="0.5"></label>
+      <label>סטופ (שבר מה-ATR) <input name="orb.stop_atr_frac" type="number" step="0.01" min="0.03" max="1"></label>
+      <label>יעד ב-R (ריק = יציאה בסוף היום) <input name="orb.target_r" type="number" step="0.5" min="0"></label>
+    </fieldset>
+    <fieldset><legend>מצב אוטומטי</legend>
+      <label>ציון מינימלי לביצוע אוטומטי <input name="auto.min_score" type="number" min="0" max="100"></label>
+      <label class="row"><input name="auto.require_ai_ok" type="checkbox"> לחסום כש-Claude ממליץ לדלג</label>
+      <label class="row"><input name="news.auto_allowed" type="checkbox"> לאפשר אוטומטי גם לאסטרטגיית החדשות (ניסיונית)</label>
+    </fieldset>
+    <fieldset><legend>רשימת מעקב</legend>
+      <label>סימולים (מופרדים בפסיק) <input name="watchlist" type="text"></label>
+    </fieldset>
+    <div class="dlg-actions">
+      <button value="cancel" class="ghost">ביטול</button>
+      <button id="settings-save" value="default" class="primary">שמירה</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-confirm">
+  <form method="dialog">
+    <h2 id="confirm-title">אישור</h2>
+    <div id="confirm-body"></div>
+    <input id="confirm-input" type="text" hidden>
+    <div class="dlg-actions">
+      <button value="cancel" class="ghost">ביטול</button>
+      <button value="ok" id="confirm-ok" class="primary">אישור</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toasts"></div>
+<footer class="foot">TradePilot אינו ייעוץ השקעות. מסחר יומי מסוכן ורוב הסוחרים היומיים מפסידים כסף. התחל במסחר נייר.</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>
