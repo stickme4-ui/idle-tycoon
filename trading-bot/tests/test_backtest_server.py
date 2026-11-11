@@ -56,3 +56,13 @@ def test_server_endpoints_without_starting_the_market():
         assert c.post("/api/mode", json={"mode": "auto"}).json()["ok"] is True
         assert c.post("/api/kill", json={"on": True}).json()["ok"] is True
         assert c.get("/api/state").json()["mode"] == "manual"
+
+
+def test_one_minute_bars_see_that_the_low_came_before_the_entry():
+    from tradepilot.backtest import BTConfig, simulate_trade
+    sig = Signal("X", "orb", Side.BUY, 51.0, 50.8, None)
+    one = [mk("X", D, 9, 30 + i, 50, 50.9, 49.9, 50.5) for i in range(5)]
+    one += [mk("X", D, 9, 35, 50.5, 50.6, 50.4, 50.6), mk("X", D, 9, 36, 50.6, 51.2, 50.6, 51.1),
+            mk("X", D, 15, 54, 51.5, 51.6, 51.4, 51.5)]
+    fill, exit_px, reason = simulate_trade(sig, one, 5, BTConfig(bar_minutes=1, slippage_bps=0))
+    assert reason == "close" and exit_px == 51.5      # with 5-minute bars this same path counts as a stop

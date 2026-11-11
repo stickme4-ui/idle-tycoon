@@ -29,7 +29,7 @@ class Status(str, Enum):
 ACTIVE = {Status.WAITING, Status.ARMED, Status.TRIGGERED}
 
 
-@dataclass
+@dataclass(slots=True)
 class Bar:
     symbol: str
     ts: datetime          # bar START time, timezone-aware

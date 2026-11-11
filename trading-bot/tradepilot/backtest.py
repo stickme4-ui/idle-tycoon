@@ -262,14 +262,15 @@ def demo_data(days: int, seed: int = 3) -> tuple[dict, dict]:
     # the warm-up opening ranges, as 5-minute bars
     warm = defaultdict(list)
     for sym, bars in m._hist[1].items():
-        for b in ind.aggregate(bars, 5):
+        warm_bars = [b for b in bars if ind.ny(b.ts).date() < start]   # demo days are already in `intraday`
+        for b in ind.aggregate(warm_bars, 5):
             warm[sym].append(b)
     for sym in warm:
         intraday[sym] = sorted(warm[sym] + intraday[sym], key=lambda b: b.ts)
     return daily, intraday
 
 
-def alpaca_data(symbols: list, start: date, end: date, feed: str = "iex") -> tuple[dict, dict]:
+def alpaca_data(symbols: list, start: date, end: date, feed: str = "iex", bar_minutes: int = 1) -> tuple[dict, dict]:
     import os
     from alpaca.data.enums import DataFeed
     from alpaca.data.historical import StockHistoricalDataClient
@@ -284,18 +285,21 @@ def alpaca_data(symbols: list, start: date, end: date, feed: str = "iex") -> tup
     s0 = datetime.combine(start - timedelta(days=45), time(0), NY)
     e0 = datetime.combine(end + timedelta(days=1), time(0), NY)
     for sym in symbols:
-        f = cache / f"{sym}_{start}_{end}_{feed}.json.gz"
+        f = cache / f"{sym}_{start}_{end}_{feed}_{bar_minutes}m.json.gz"
         if f.exists():
             raw = json.loads(gzip.decompress(f.read_bytes()))
         else:
             raw = {}
-            for key, tf in (("d", TimeFrame.Day), ("m5", TimeFrame(5, TimeFrameUnit.Minute))):
+            for key, tf in (("d", TimeFrame.Day), ("m", TimeFrame(bar_minutes, TimeFrameUnit.Minute))):
                 res = c.get_stock_bars(StockBarsRequest(symbol_or_symbols=sym, timeframe=tf, start=s0, end=e0, feed=DataFeed(feed)))
-                raw[key] = [[b.timestamp.isoformat(), b.open, b.high, b.low, b.close, b.volume] for b in res.data.get(sym, [])]
+                rows = res.data.get(sym, [])
+                if key == "m":   # regular session only: keeps the cache small
+                    rows = [b for b in rows if time(9, 30) <= b.timestamp.astimezone(NY).time() < time(16, 0)]
+                raw[key] = [[b.timestamp.isoformat(), b.open, b.high, b.low, b.close, b.volume] for b in rows]
             f.write_bytes(gzip.compress(json.dumps(raw).encode()))
         mk = lambda rows: [Bar(sym, datetime.fromisoformat(r[0]), *map(float, r[1:6])) for r in rows]
-        daily[sym], intraday[sym] = mk(raw["d"]), mk(raw["m5"])
-        print(f"  {sym}: {len(daily[sym])} days, {len(intraday[sym])} 5-min bars", flush=True)
+        daily[sym], intraday[sym] = mk(raw["d"]), mk(raw["m"])
+        print(f"  {sym}: {len(daily[sym])} days, {len(intraday[sym])} {bar_minutes}-min bars", flush=True)
     return daily, intraday
 
 
@@ -309,6 +313,9 @@ def main(argv=None) -> None:
     ap.add_argument("--symbols-file")
     ap.add_argument("--feed", default="iex")
     ap.add_argument("--top-n", type=int, default=20)
+    ap.add_argument("--min-rvol", type=float, default=1.0)
+    ap.add_argument("--bars", type=int, default=1, choices=[1, 5],
+                    help="alpaca: bar size in minutes. 1 (default) is far more accurate with tight stops")
     ap.add_argument("--risk-pct", type=float, default=1.0)
     ap.add_argument("--leverage", type=float, default=1.0)
     ap.add_argument("--slippage-bps", type=float, default=2.0)
@@ -317,7 +324,7 @@ def main(argv=None) -> None:
     ap.add_argument("--target-r", type=float)
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
-    cfg = BTConfig(orb=OrbConfig(top_n=a.top_n, target_r=a.target_r), risk_pct=a.risk_pct, max_leverage=a.leverage,
+    cfg = BTConfig(orb=OrbConfig(top_n=a.top_n, min_rvol=a.min_rvol, target_r=a.target_r), risk_pct=a.risk_pct, max_leverage=a.leverage,
                    slippage_bps=a.slippage_bps, commission_per_share=a.commission, allow_short=not a.long_only)
     if a.source == "demo":
         daily, intraday = demo_data(a.days)
@@ -328,7 +335,8 @@ def main(argv=None) -> None:
             syms += [s.strip().upper() for s in Path(a.symbols_file).read_text().split() if s.strip()]
         if not syms or not a.start or not a.end:
             ap.error("--source alpaca needs --start, --end and --symbols or --symbols-file")
-        daily, intraday = alpaca_data(syms, a.start, a.end, a.feed)
+        cfg.bar_minutes = a.bars
+        daily, intraday = alpaca_data(syms, a.start, a.end, a.feed, a.bars)
         res = run(daily, intraday, cfg, a.start, a.end)
     if a.json:
         print(json.dumps(res, indent=2, default=str))
