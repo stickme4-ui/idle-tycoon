@@ -204,3 +204,20 @@ def test_review_result_mapped():
         rv = await Analyst(client=client).review(p, {"regime": {}, "news": [], "time": ""})
         assert rv.verdict == "skip" and rv.confidence == 80
     run(go())
+
+
+def test_news_outside_the_universe_costs_no_ai_call():
+    async def go():
+        e, clock, broker = make_engine()
+        await e.prepare_day()
+        calls = []
+
+        async def spy(item):
+            calls.append(item.id)
+            return heuristic_news(item)
+        e.ai.analyze_news = spy
+        now = clock.now()
+        await e.on_news(NewsItem("x1", now, "ZZZZ beats estimates", symbols=["ZZZZ"]))
+        await e.on_news(NewsItem("x2", now, "AAA beats estimates", symbols=["AAA"]))
+        assert calls == ["x2"]
+    run(go())

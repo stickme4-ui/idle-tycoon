@@ -205,7 +205,16 @@ class Engine:
             if hit:
                 await self.on_trigger(p)
 
+    def _relevant(self, symbols) -> bool:
+        """Only headlines about stocks we scan, hold or have a proposal for are worth an AI call:
+        the live news stream carries thousands of headlines a day."""
+        watched = set(self.ctx.universe) | {p.signal.symbol for p in self.proposals.values()}
+        watched |= {x.symbol for x in self.positions}
+        return any(s in watched for s in symbols)
+
     async def on_news(self, item, fresh: bool = True) -> None:
+        if not self._relevant(item.symbols):
+            return
         a = await self.ai.analyze_news(item)
         self.ctx.add_news(item, a)
         row = {"ts": item.ts.isoformat(), "symbols": item.symbols, "headline": item.headline, "source": item.source,
