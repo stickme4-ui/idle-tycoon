@@ -1,0 +1,16 @@
+{
+  "name": "tiktok-live-arena",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local TikTok LIVE interaction server: gifts/likes spawn enemies in GTA V, with health bar and effect overlays.",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "tiktok-live-connector": "2.5.0",
+    "ws": "8.23.0"
+  }
+}

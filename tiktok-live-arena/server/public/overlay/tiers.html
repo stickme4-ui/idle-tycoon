@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enemy Tiers</title>
+<link rel="stylesheet" href="/overlay/overlay.css">
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+import { mountTiers, start } from '/overlay/widgets.js';
+import { params } from '/overlay/common.js';
+const root = document.getElementById('root');
+const num = (k, d) => (params.has(k) ? Number(params.get(k)) : d);
+start({ tiers: mountTiers(root, { bottom: num('bottom', 20) }) });
+</script>
+</body>
+</html>

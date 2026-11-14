@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Arena – לוח בקרה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800;900&display=swap">
+<link rel="stylesheet" href="/panel/panel.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">⚔</span><div><b>Live Arena</b><small>מערכת לייב אינטראקטיבית</small></div></div>
+  <div class="pills">
+    <span class="pill" id="pill-tiktok"><i></i><span>טיקטוק: מנותק</span></span>
+    <span class="pill" id="pill-game"><i></i><span>GTA: לא מחובר</span></span>
+    <span class="pill hp-pill"><span id="pill-hp">—</span></span>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="dash" class="on">לוח בקרה</button>
+  <button data-tab="rules">מתנות ואירועים</button>
+  <button data-tab="tiers">דמויות</button>
+  <button data-tab="settings">הגדרות</button>
+  <button data-tab="overlays">אוברליי ל-LIVE Studio</button>
+  <button data-tab="install">התקנת המוד</button>
+</nav>
+
+<main>
+  <!-- ================= DASHBOARD ================= -->
+  <section id="tab-dash" class="tab on">
+    <div class="grid2">
+      <div class="card">
+        <h2>חיבור ללייב</h2>
+        <div class="row">
+          <div class="input-at"><span>@</span><input id="username" placeholder="שם המשתמש שלך בטיקטוק" autocomplete="off" dir="ltr"></div>
+          <button class="btn primary" id="btn-connect">התחבר</button>
+          <button class="btn" id="btn-disconnect">נתק</button>
+        </div>
+        <p class="hint" id="conn-msg">צריך להיות בלייב (ב-TikTok LIVE Studio) כדי להתחבר. אם הלייב עוד לא התחיל – המערכת תנסה שוב אוטומטית.</p>
+      </div>
+      <div class="card">
+        <h2>חיים</h2>
+        <div class="hpbox">
+          <div class="hpbar"><div id="hp-fill"></div><span id="hp-text">—</span></div>
+        </div>
+        <div class="row wrap">
+          <button class="btn green" data-post="/api/hp/reset">מלא חיים</button>
+          <button class="btn red" data-post="/api/hp/ko">הפל (K.O.)</button>
+          <button class="btn" data-post="/api/queue/clear">נקה תור אויבים</button>
+          <button class="btn" data-post="/api/game/clear">מחק אויבים מהמשחק</button>
+          <button class="btn ghost" data-post="/api/stats/reset" data-confirm="לאפס את כל הסטטיסטיקות?">אפס סטטיסטיקות</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>הפעלה ידנית</h2>
+        <p class="hint">שגר אויבים או הפעל אפקט בלי מתנה – טוב לבדיקה או כדי לחמם את הלייב.</p>
+        <div class="row wrap" id="manual-tiers"></div>
+        <div class="row wrap" style="margin-top:10px">
+          <button class="btn green" data-action='{"type":"heal","amount":5000}'>ריפוי +5,000</button>
+          <button class="btn" data-action='{"type":"airstrike","count":10}'>תקיפה אווירית</button>
+          <button class="btn" data-action='{"type":"slowmo","seconds":6}'>הילוך איטי</button>
+          <button class="btn" data-action='{"type":"weapon","weapon":"WEAPON_RPG"}'>תן RPG</button>
+          <button class="btn" data-action='{"type":"launch"}'>הקפצה</button>
+          <button class="btn red" data-action='{"type":"killAll"}'>פצצה (השמד הכל)</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>סימולטור אירועים</h2>
+        <p class="hint">מדמה אירוע אמיתי מהלייב – עובר דרך כל החוקים, בדיוק כמו צופה אמיתי.</p>
+        <div class="row wrap">
+          <input id="sim-gift" list="gift-list" placeholder="שם מתנה (למשל Rose)" dir="ltr" value="Rose">
+          <input id="sim-count" type="number" min="1" value="1" style="width:80px">
+          <button class="btn primary" id="sim-send-gift">שלח מתנה</button>
+        </div>
+        <div class="row wrap" style="margin-top:10px">
+          <button class="btn" data-sim='{"kind":"like","count":50}'>+50 לייקים</button>
+          <button class="btn" data-sim='{"kind":"like","count":500}'>+500 לייקים</button>
+          <button class="btn" data-sim='{"kind":"follow"}'>עוקב חדש</button>
+          <button class="btn" data-sim='{"kind":"share"}'>שיתוף</button>
+          <input id="sim-chat" placeholder="הודעת צ'אט" dir="ltr" style="width:140px">
+          <button class="btn" id="sim-send-chat">שלח צ'אט</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>יומן אירועים</h2>
+        <div class="log" id="log"></div>
+      </div>
+      <div class="card">
+        <h2>תומכים מובילים</h2>
+        <div id="top"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= RULES ================= -->
+  <section id="tab-rules" class="tab">
+    <div class="card">
+      <div class="card-head">
+        <h2>מתנות ואירועים → פעולות</h2>
+        <div class="row">
+          <button class="btn" id="rule-add">+ חוק חדש</button>
+          <button class="btn ghost" id="rules-reset">שחזר ברירת מחדל</button>
+          <button class="btn primary save" data-save="rules">שמור</button>
+        </div>
+      </div>
+      <p class="hint">כל שורה = "כשקורה X → תעשה Y". הכמות מוכפלת במספר המתנות (5 ורדים = פי 5). שמות המתנות באנגלית בדיוק כמו בטיקטוק – אחרי ההתחברות ללייב תקבל רשימה אוטומטית. אפשר גם להשתמש במספר ה-ID של המתנה.</p>
+      <div id="rules"></div>
+    </div>
+  </section>
+
+  <!-- ================= TIERS ================= -->
+  <section id="tab-tiers" class="tab">
+    <div class="card">
+      <div class="card-head">
+        <h2>דמויות (מהחלש לחזק)</h2>
+        <div class="row">
+          <button class="btn" id="tier-add">+ דמות</button>
+          <button class="btn ghost" id="tiers-reset">שחזר ברירת מחדל</button>
+          <button class="btn primary save" data-save="tiers">שמור</button>
+        </div>
+      </div>
+      <p class="hint">"מודל" = שם המודל במשחק. אפשר להשתמש בדמויות של GTA (עובד מיד) או בדמויות Add-On שהורדת מ-gta5-mods – פשוט כתוב כאן את שם המודל שלהן. "תמונה" היא לינק או נתיב לתמונה שתוצג ברצועת הדמויות באוברליי.</p>
+      <div id="tiers" class="tiers-grid"></div>
+    </div>
+  </section>
+
+  <!-- ================= SETTINGS ================= -->
+  <section id="tab-settings" class="tab">
+    <div class="card-head" style="margin-bottom:12px">
+      <h2></h2>
+      <button class="btn primary save" data-save="settings">שמור הגדרות</button>
+    </div>
+    <div class="grid2" id="settings"></div>
+  </section>
+
+  <!-- ================= OVERLAYS ================= -->
+  <section id="tab-overlays" class="tab">
+    <div class="card">
+      <h2>הוספה ל-TikTok LIVE Studio</h2>
+      <ol class="steps">
+        <li>ב-LIVE Studio: לחץ <b>Add source</b> (הוסף מקור) ← בחר <b>Game</b> (או Screen) ובחר את GTA V.</li>
+        <li>לחץ שוב <b>Add source</b> ← בחר <b>Link</b> (קישור).</li>
+        <li>הדבק את הקישור של <b>"הכל ביחד"</b> מלמטה. גודל: <b>1080 × 1920</b>.</li>
+        <li>מתח את מקור הקישור על כל המסך ודאג שהוא <b>מעל</b> המשחק ברשימת המקורות.</li>
+        <li>רוצה למקם כל רכיב בנפרד? הוסף כל קישור כמקור נפרד.</li>
+      </ol>
+      <p class="hint">הרקע של האוברליי שקוף. אפשר להוסיף <code dir="ltr">?sound=0</code> לסוף הקישור כדי לכבות צלילים. מיקומים: <code dir="ltr">?hp=330&amp;top=150&amp;bottom=20</code></p>
+      <div id="overlay-links"></div>
+    </div>
+    <div class="card">
+      <h2>תצוגה מקדימה</h2>
+      <div class="preview"><iframe id="preview" title="preview"></iframe></div>
+      <p class="hint">השתמש בסימולטור בלוח הבקרה כדי לראות אפקטים כאן.</p>
+    </div>
+  </section>
+
+  <!-- ================= INSTALL ================= -->
+  <section id="tab-install" class="tab">
+    <div class="card">
+      <h2>התקנת המוד ל-GTA V</h2>
+      <p class="hint">הכנס את הנתיב של תיקיית GTA V (התיקייה שבה נמצא GTA5.exe). דוגמאות:<br>
+        <code dir="ltr">C:\Program Files (x86)\Steam\steamapps\common\Grand Theft Auto V</code><br>
+        <code dir="ltr">C:\Program Files\Rockstar Games\Grand Theft Auto V</code><br>
+        <code dir="ltr">C:\Program Files\Epic Games\GTAV</code></p>
+      <div class="row">
+        <input id="gta-path" dir="ltr" style="flex:1" placeholder="C:\...\Grand Theft Auto V">
+        <button class="btn" id="gta-check">בדוק</button>
+        <button class="btn primary" id="gta-install">התקן / עדכן מוד</button>
+      </div>
+      <div id="gta-checks" class="checks"></div>
+    </div>
+    <div class="card">
+      <h2>מה צריך להתקין במשחק (פעם אחת)</h2>
+      <ol class="steps">
+        <li><b>Script Hook V</b> – מ-<a href="http://www.dev-c.com/gtav/scripthookv/" target="_blank">dev-c.com/gtav/scripthookv</a>. מעתיקים את <code>ScriptHookV.dll</code> ו-<code>dinput8.dll</code> לתיקיית המשחק.</li>
+        <li><b>ScriptHookVDotNet</b> – מ-<a href="https://github.com/scripthookvdotnet/scripthookvdotnet/releases" target="_blank">GitHub releases</a>. מעתיקים את כל הקבצים (ScriptHookVDotNet.asi, ScriptHookVDotNet2/3.dll) לתיקיית המשחק.</li>
+        <li>להתקין <b>.NET Framework 4.8</b> ו-<b>Visual C++ Redistributable</b> (בדרך כלל כבר מותקנים).</li>
+        <li>ללחוץ "התקן / עדכן מוד" למעלה – זה מעתיק את <code>TikTokArena.cs</code> לתיקיית <code>scripts</code> ומחבר אותו לשרת הזה.</li>
+        <li>להפעיל את GTA במצב <b>Story Mode</b> בלבד (לא אונליין!). כשהמוד מתחבר – הנקודה "GTA" למעלה תהפוך לירוקה.</li>
+      </ol>
+      <p class="hint warn">⚠ מודים עובדים רק ב-Story Mode. אל תיכנס ל-GTA Online עם מודים מותקנים – זה עלול לגרום לחסימה. גרסת Enhanced של GTA V (2025) צריכה גרסאות Enhanced של Script Hook V – אם משהו לא עובד, השתמש בגרסת Legacy.</p>
+    </div>
+    <div class="card">
+      <h2>הוספת דמויות מ-gta5-mods (Add-On Peds)</h2>
+      <ol class="steps">
+        <li>התקן <a href="https://openiv.com" target="_blank">OpenIV</a> והפעל את "ASI Manager" ← התקן את <b>OpenIV.ASI</b>.</li>
+        <li>צור תיקיית <code>mods</code> ב-OpenIV (Tools ← Options ← "mods" folder).</li>
+        <li>בחר דמויות שמסומנות <b>Add-On</b> (לא Replace) ב-gta5-mods.com ← קטגוריית Player / Peds.</li>
+        <li>לרוב יש בהן תיקיית DLC: מעתיקים ל-<code dir="ltr">mods\update\x64\dlcpacks\</code> ומוסיפים שורה ל-<code>dlclist.xml</code> (ההוראות תמיד בקובץ readme של המוד).</li>
+        <li>את <b>שם המודל</b> (כתוב ב-readme או בשם קובץ ה-.ydd/.yft) מכניסים בטאב "דמויות" במקום הדמות שאתה רוצה להחליף.</li>
+        <li>אם המודל לא נטען – המוד ישתמש אוטומטית בחייל SWAT כדי שהלייב לא ייתקע.</li>
+      </ol>
+    </div>
+  </section>
+</main>
+
+<datalist id="gift-list"></datalist>
+<datalist id="weapon-list"></datalist>
+<div id="toast"></div>
+<script type="module" src="/panel/panel.js"></script>
+</body>
+</html>

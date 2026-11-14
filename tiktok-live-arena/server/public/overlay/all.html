@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arena Overlay</title>
+<link rel="stylesheet" href="/overlay/overlay.css">
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+import { mountHealth, mountAlerts, mountTiers, start } from '/overlay/widgets.js';
+import { params } from '/overlay/common.js';
+const root = document.getElementById('root');
+const num = (k, d) => (params.has(k) ? Number(params.get(k)) : d);
+const health = mountHealth(root, { bottom: num('hp', 330) });
+const alerts = mountAlerts(root, { top: num('top', 150) });
+const tiers = mountTiers(root, { bottom: num('bottom', 20) });
+start({ health, alerts, tiers });
+</script>
+</body>
+</html>
