@@ -14,9 +14,36 @@
 |---|---|
 | `START.bat` | מפעיל את השרת (לחיצה כפולה) |
 | `server/` | השרת המקומי + לוח הבקרה בעברית (כמו TikFinity) + האוברליי |
-| `gta-mod/TikTokArena.cs` | המוד ל-GTA V (ScriptHookVDotNet v3) |
+| `START_FIVEM.bat` / `START_ALL.bat` | מפעיל שרת FiveM מקומי / את שניהם יחד |
+| `fivem-server/` | שרת FiveM מקומי מוכן: `server.cfg` + המשאב `live_arena` + `arena_peds` לדמויות |
+| `gta-mod/TikTokArena.cs` | חלופה: מוד ל-GTA V רגיל (ScriptHookVDotNet v3) |
 
-## התקנה – צעד אחר צעד
+## אפשרות 1 (מומלצת): שרת FiveM מקומי
+
+שרת FiveM שרץ רק על המחשב שלך (מאזין רק ל-127.0.0.1, לא מופיע ברשימת השרתים). בלי סכנת באן, בלי Script Hook ובלי OpenIV, ודמויות Add-On פשוט נזרקות לתיקייה.
+
+1. מתקינים **Node.js** (LTS) ואת **FiveM** (<https://fivem.net>). צריך GTA V חוקי.
+2. לחיצה כפולה על **`START_ALL.bat`**. הוא מפעיל את שרת הלוח ואת שרת ה-FiveM. בפעם הראשונה:
+   - נפתח דף הורדה של **FXServer**: מורידים את ה-build המומלץ האחרון (`server.7z`) ומחלצים ל-`fivem-server\artifacts\`, כך שיהיה קיים `fivem-server\artifacts\FXServer.exe`.
+   - נפתח **portal.cfx.re**: מתחברים, יוצרים מפתח שרת חינמי (IP: `127.0.0.1`) ומדביקים אותו בחלון. הוא נשמר ב-`license.cfg`.
+3. פותחים FiveM ← **F8** ← `connect 127.0.0.1:30120`.
+4. בלוח הבקרה הנקודה תהפוך ל-**"FiveM: מחובר"**. משם הכל עובד כמו שמתואר למטה (LIVE Studio, מתנות, דמויות).
+
+**הגדרות FiveM** (`fivem-server/resources/[live]/live_arena/config.lua`):
+- `Config.PlayerModel`: הדמות שלך (גם Add-On, למשל קפטן אמריקה).
+- `Config.Spawn`: נקודת ההתחלה (ברירת מחדל: מזח דל פרו והחוף, כמו בתמונה).
+- `Config.Loadout` / `Config.InfiniteAmmo`: הנשקים שלך.
+- `Config.RespawnAt`, `Config.RespawnDelay`: איפה ומתי קמים אחרי K.O.
+- צפיפות הולכי רגל ותנועה, מזג אוויר, שעה קבועה, ביטול משטרה.
+
+**דמויות Add-On ב-FiveM:**
+- אם המוד מגיע כמשאב FiveM (יש בו `fxmanifest.lua`): מעתיקים את התיקייה ל-`fivem-server/resources/` ומוסיפים `ensure <שם>` ל-`server.cfg`.
+- אם זה Add-On רגיל (dlc.rpf): פותחים ב-OpenIV, מעתיקים את קבצי `.ydd/.yft/.ytd/.ymt` ל-`arena_peds/stream/`, ואת בלוק ה-`<Item>` מתוך `peds.meta` של המוד ל-`arena_peds/peds.meta`.
+- בשני המקרים כותבים את שם המודל בטאב "דמויות" בלוח.
+
+פקודות שימושיות: ב-F8 של המשחק `arena_respawn`, `arena_clear`. בקונסול של השרת `arena_status`.
+
+## אפשרות 2: GTA V רגיל (Story Mode) עם מוד
 
 ### 1. דרישות (פעם אחת)
 1. **Node.js** (גרסת LTS) – <https://nodejs.org>

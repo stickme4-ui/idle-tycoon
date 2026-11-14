@@ -7,7 +7,7 @@ import { WebSocketServer } from 'ws';
 import { loadConfig, saveConfig, applyPatch, SERVER_ROOT, DEFAULT_TIERS, DEFAULT_RULES } from './config.js';
 import { Engine } from './engine.js';
 import { TikTokBridge } from './tiktok.js';
-import { checkGta, installMod, writeModIni } from './installer.js';
+import { checkGta, installMod, writeModIni, writeFiveMUrl, checkFiveM } from './installer.js';
 
 const PUBLIC_DIR = path.join(SERVER_ROOT, 'public');
 const MIME = {
@@ -41,6 +41,7 @@ function fullState() {
     tiktok: tiktok.status(),
     gifts: tiktok.gifts,
     gta: checkGta(cfg.game.gtaPath),
+    fivem: checkFiveM(),
     log: logBuffer.slice(-100),
     port: activePort,
   };
@@ -163,6 +164,7 @@ const routes = {
   },
 
   'POST /api/gta/check': async (body) => checkGta(body.path ?? cfg.game.gtaPath),
+  'POST /api/fivem/check': async () => checkFiveM(),
   'POST /api/gta/install': async (body) => {
     const p = String(body.path || cfg.game.gtaPath || '').trim().replace(/^"|"$/g, '');
     const result = installMod(p, activePort);
@@ -224,6 +226,7 @@ async function main() {
     persist();
   }
   if (cfg.game.gtaPath) { try { writeModIni(cfg.game.gtaPath, activePort); } catch { /* ignore */ } }
+  try { writeFiveMUrl(activePort); } catch { /* ignore */ }
 
   const server = http.createServer((req, res) => {
     handle(req, res).catch((e) => { try { send(res, 500, { error: e.message }); } catch { /* ignore */ } });

@@ -24,7 +24,7 @@
   <button data-tab="tiers">דמויות</button>
   <button data-tab="settings">הגדרות</button>
   <button data-tab="overlays">אוברליי ל-LIVE Studio</button>
-  <button data-tab="install">התקנת המוד</button>
+  <button data-tab="install">התקנה (FiveM / GTA)</button>
 </nav>
 
 <main>
@@ -167,7 +167,20 @@
   <!-- ================= INSTALL ================= -->
   <section id="tab-install" class="tab">
     <div class="card">
-      <h2>התקנת המוד ל-GTA V</h2>
+      <div class="card-head"><h2>אפשרות 1 (מומלצת): שרת FiveM מקומי</h2><button class="btn" id="fivem-check">רענן בדיקה</button></div>
+      <p class="hint">שרת FiveM שרץ רק על המחשב שלך. אין סכנת באן, דמויות Add-On נטענות בלי OpenIV, ואין צורך ב-Script Hook. תיקיית השרת: <code dir="ltr" id="fivem-dir"></code></p>
+      <ol class="steps">
+        <li>התקן את <a href="https://fivem.net" target="_blank">FiveM</a> (הלקוח) – צריך GTA V חוקי (Steam / Rockstar / Epic).</li>
+        <li>הפעל <code>START_FIVEM.bat</code> (או <code>START_ALL.bat</code> שמפעיל גם את השרת הזה). בפעם הראשונה הוא יפתח:
+          <br>• דף הורדה של FXServer – מורידים את ה-build המומלץ האחרון ומחלצים לתיקייה <code dir="ltr">fivem-server\artifacts</code>
+          <br>• דף <a href="https://portal.cfx.re/servers/registration-keys" target="_blank">portal.cfx.re</a> – יוצרים מפתח חינמי ומדביקים בחלון.</li>
+        <li>פותחים FiveM ← לוחצים <b>F8</b> ← כותבים <code dir="ltr">connect 127.0.0.1:30120</code></li>
+        <li>הנקודה למעלה תהפוך ל-<b>"FiveM: מחובר"</b>. הדמות, הנשקים ונקודת ההתחלה מוגדרים ב-<code dir="ltr">live_arena\config.lua</code>.</li>
+      </ol>
+      <div id="fivem-checks" class="checks"></div>
+    </div>
+    <div class="card">
+      <h2>אפשרות 2: מוד ל-GTA V רגיל (Story Mode)</h2>
       <p class="hint">הכנס את הנתיב של תיקיית GTA V (התיקייה שבה נמצא GTA5.exe). דוגמאות:<br>
         <code dir="ltr">C:\Program Files (x86)\Steam\steamapps\common\Grand Theft Auto V</code><br>
         <code dir="ltr">C:\Program Files\Rockstar Games\Grand Theft Auto V</code><br>

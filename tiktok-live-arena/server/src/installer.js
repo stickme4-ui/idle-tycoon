@@ -56,3 +56,23 @@ export function writeModIni(gtaPath, port) {
   fs.writeFileSync(path.join(scripts, 'TikTokArena.ini'), ini);
   return true;
 }
+
+// ---------------- FiveM ----------------
+const FIVEM_DIR = path.join(PROJECT_ROOT, 'fivem-server');
+const FIVEM_RES = path.join(FIVEM_DIR, 'resources', '[live]', 'live_arena');
+
+// The live_arena resource reads server_url.txt, so the real port always reaches FiveM.
+export function writeFiveMUrl(port) {
+  if (!exists(FIVEM_RES)) return false;
+  fs.writeFileSync(path.join(FIVEM_RES, 'server_url.txt'), `http://127.0.0.1:${port}\n`);
+  return true;
+}
+
+export function checkFiveM() {
+  return {
+    dir: FIVEM_DIR,
+    resource: exists(path.join(FIVEM_RES, 'fxmanifest.lua')),
+    artifacts: exists(path.join(FIVEM_DIR, 'artifacts', 'FXServer.exe')),
+    license: exists(path.join(FIVEM_DIR, 'license.cfg')),
+  };
+}

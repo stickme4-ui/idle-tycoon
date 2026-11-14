@@ -42,7 +42,7 @@ export class Engine extends EventEmitter {
     return {
       hp: Math.round(this.hp), max: cfg.health.max, dead: this.dead,
       deaths: this.deaths, kills: this.kills, alive: this.alive, queue: this.queue.length,
-      game: { connected: this.game.connected, lastPoll: this.game.lastPoll },
+      game: { connected: this.game.connected, lastPoll: this.game.lastPoll, fivem: this.game.version.startsWith('fivem') },
       stats: this.stats,
       top: this.topSupporters(5),
     };

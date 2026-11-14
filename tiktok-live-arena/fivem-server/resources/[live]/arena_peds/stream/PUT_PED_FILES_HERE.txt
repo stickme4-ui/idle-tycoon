@@ -1,0 +1,2 @@
+Put the add-on ped files here: <model>.ydd, <model>.yft, <model>.ytd (and <model>.ymt if it has one).
+Then write <model> in the "Model" field of a tier in the Live Arena control panel.

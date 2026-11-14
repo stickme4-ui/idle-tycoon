@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CPedModelInfo__InitDataList>
+  <InitDatas>
+    <!--
+      Paste the <Item type="CPedModelInfo__InitData"> ... </Item> blocks from the
+      peds.meta of each add-on ped you downloaded here (it is inside the mod's
+      dlc.rpf -> common -> data, open it with OpenIV).
+    -->
+  </InitDatas>
+  <txdRelationships />
+</CPedModelInfo__InitDataList>

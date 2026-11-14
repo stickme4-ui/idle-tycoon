@@ -3,7 +3,7 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const fmt = (n) => Math.round(n || 0).toLocaleString('en-US');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const S = { config: null, engine: null, tiktok: null, gifts: [], gta: null, port: 0 };
+const S = { config: null, engine: null, tiktok: null, gifts: [], gta: null, fivem: null, port: 0 };
 const dirty = { rules: false, tiers: false, settings: false };
 
 const FALLBACK_GIFTS = ['Rose', 'TikTok', 'Heart Me', 'Finger Heart', 'GG', 'Ice Cream Cone', 'Doughnut', 'Perfume', 'Hand Hearts', 'Hat and Mustache', 'Confetti', 'Sunglasses', 'Corgi', 'Money Gun', 'Swan', 'Galaxy', 'Lion', 'Universe'];
@@ -35,7 +35,7 @@ function connectWs() {
   ws.onmessage = (m) => {
     const { type, data } = JSON.parse(m.data);
     if (type === 'init') {
-      Object.assign(S, { config: data.config, engine: data.engine, tiktok: data.tiktok, gifts: data.gifts || [], gta: data.gta, port: data.port });
+      Object.assign(S, { config: data.config, engine: data.engine, tiktok: data.tiktok, gifts: data.gifts || [], gta: data.gta, fivem: data.fivem, port: data.port });
       $('#log').innerHTML = '';
       data.log.forEach(addLog);
       renderAll();
@@ -53,7 +53,7 @@ function connectWs() {
 function setPill(sel, cls, text) { const p = $(sel); p.className = 'pill ' + cls; p.querySelector('span').textContent = text; }
 
 function renderAll() {
-  renderTikTok(); renderEngine(); renderGiftList(); renderEditors(); renderOverlayLinks(); renderManual(); renderGta(S.gta);
+  renderTikTok(); renderEngine(); renderGiftList(); renderEditors(); renderOverlayLinks(); renderManual(); renderGta(S.gta); renderFiveM(S.fivem);
   if (!$('#username').value) $('#username').value = S.config.tiktok.username || '';
   if (!$('#gta-path').value) $('#gta-path').value = S.config.game.gtaPath || '';
 }
@@ -73,7 +73,8 @@ function renderTikTok() {
 function renderEngine() {
   const e = S.engine;
   if (!e) return;
-  setPill('#pill-game', e.game?.connected ? 'ok' : '', e.game?.connected ? 'GTA: מחובר' : 'GTA: לא מחובר');
+  const gname = e.game?.fivem ? 'FiveM' : 'GTA';
+  setPill('#pill-game', e.game?.connected ? 'ok' : '', e.game?.connected ? `${gname}: מחובר` : 'משחק: לא מחובר');
   renderHp();
   const st = e.stats || {};
   const items = [
@@ -328,6 +329,14 @@ function renderGta(c) {
     + (c.enhanced ? '<div class="check"><span class="dot">!</span>זוהתה גרסת Enhanced – ודא שהורדת Script Hook V שתומך בה</div>' : '') : '';
 }
 
+function renderFiveM(c) {
+  if (!c) return;
+  const items = [['resource', 'משאב live_arena קיים'], ['artifacts', 'FXServer הורד (artifacts)'], ['license', 'מפתח רישיון (license.cfg)']];
+  $('#fivem-checks').innerHTML = items.map(([k, l]) => `<div class="check ${c[k] ? 'ok' : ''}"><span class="dot">${c[k] ? '✔' : '✕'}</span>${l}</div>`).join('')
+    + `<div class="check ${S.engine?.game?.fivem && S.engine?.game?.connected ? 'ok' : ''}"><span class="dot">${S.engine?.game?.fivem && S.engine?.game?.connected ? '✔' : '…'}</span>FiveM מחובר לשרת</div>`;
+  $('#fivem-dir').textContent = c.dir;
+}
+
 // ---------- events ----------
 document.addEventListener('click', async (e) => {
   const b = e.target.closest('button');
@@ -378,6 +387,7 @@ $('#tier-add').onclick = () => {
 $('#rules-reset').onclick = async () => { if (!confirm('לשחזר את כל החוקים לברירת המחדל?')) return; dirty.rules = false; S.config = (await api('/api/config/reset', { what: 'rules' })).config; renderEditors(); toast('שוחזר'); };
 $('#tiers-reset').onclick = async () => { if (!confirm('לשחזר את כל הדמויות לברירת המחדל?')) return; dirty.tiers = false; S.config = (await api('/api/config/reset', { what: 'tiers' })).config; renderEditors(); toast('שוחזר'); };
 
+$('#fivem-check').onclick = async () => { S.fivem = await api('/api/fivem/check', {}); renderFiveM(S.fivem); };
 $('#gta-check').onclick = async () => renderGta(await api('/api/gta/check', { path: $('#gta-path').value }));
 $('#gta-install').onclick = async () => {
   try { renderGta(await api('/api/gta/install', { path: $('#gta-path').value })); toast('המוד הותקן ✔ – הפעל את GTA'); }
