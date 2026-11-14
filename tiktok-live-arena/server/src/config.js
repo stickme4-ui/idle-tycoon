@@ -66,6 +66,9 @@ export const DEFAULT_CONFIG = {
   overlay: {
     showTiers: true,
     showAlerts: true,
+    showScoreboard: true,
+    showLeaderboard: true,
+    leaderboardSeconds: 8,
     alertSeconds: 4,
     sounds: true,
   },
@@ -115,6 +118,7 @@ export function applyPatch(cfg, patch) {
   next.game.maxQueue = clampInt(next.game.maxQueue, 1, 100_000);
   next.port = clampInt(next.port, 1024, 65535);
   next.overlay.alertSeconds = clampNum(next.overlay.alertSeconds, 1, 30);
+  next.overlay.leaderboardSeconds = clampNum(next.overlay.leaderboardSeconds, 3, 60);
   return next;
 }
 

@@ -17,6 +17,7 @@ local serverOnline = nil
 
 -- reports, flushed to the server every 200 ms
 local outDmg, outKills, outAlive = 0.0, 0, 0
+local outHits = {}            -- [spawnId] = damage dealt by that viewer's enemy
 local outDied, outRespawn = false, false
 
 -- ===============================================================
@@ -202,6 +203,7 @@ local function spawnEnemy(a)
     CreateThread(function() particle('scr_rcbarry2', 'scr_clown_appears', pos, 1.2) end)
 
     enemies[#enemies + 1] = {
+        id = tostring(a.id or ''),
         ped = ped,
         mult = math.max(0.0, tonumber(a.dmg) or 1.0),
         by = (a.by or ''):sub(1, 24),
@@ -372,14 +374,19 @@ CreateThread(function()
                     initPlayerHealth(ped)
                 elseif hp < Config.PlayerBaseline then
                     local lost = Config.PlayerBaseline - hp
-                    local mult = 0.0
+                    -- Who hit us? (strongest attacker gets the credit -> kill feed & leaderboards)
+                    local attacker = nil
                     for _, e in ipairs(enemies) do
                         if DoesEntityExist(e.ped) and HasEntityBeenDamagedByEntity(ped, e.ped, true) then
-                            if e.mult > mult then mult = e.mult end
+                            if not attacker or e.mult > attacker.mult then attacker = e end
                         end
                     end
                     ClearEntityLastDamageEntity(ped)
-                    outDmg = outDmg + lost * (mult > 0.0 and mult or 1.0)
+                    local amount = lost * (attacker and attacker.mult > 0.0 and attacker.mult or 1.0)
+                    outDmg = outDmg + amount
+                    if attacker and attacker.id ~= '' then
+                        outHits[attacker.id] = (outHits[attacker.id] or 0.0) + amount
+                    end
                     SetEntityHealth(ped, Config.PlayerBaseline)
                 end
                 if GetPedArmour(ped) > 0 then SetPedArmour(ped, 0) end
@@ -472,8 +479,8 @@ CreateThread(function()
         Wait(200)
         local now = GetGameTimer()
         if outDmg > 0 or outKills > 0 or outDied or outRespawn or now - lastSent > 1000 then
-            TriggerServerEvent('live_arena:report', outDmg, outKills, outAlive, outDied, outRespawn)
-            outDmg, outKills, outDied, outRespawn = 0.0, 0, false, false
+            TriggerServerEvent('live_arena:report', outDmg, outKills, outAlive, outDied, outRespawn, outHits)
+            outDmg, outKills, outDied, outRespawn, outHits = 0.0, 0, false, false, {}
             lastSent = now
         end
     end

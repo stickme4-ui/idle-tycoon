@@ -131,3 +131,7 @@ input[type=color] { padding: 2px; width: 44px; height: 38px; }
 #toast.on { transform: translateX(-50%) translateY(0); }
 #toast.err { background: var(--red); color: #fff; }
 @media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } main { padding: 14px; } .stats { grid-template-columns: repeat(2, 1fr); } }
+
+.arena-line { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.arena-line span { background: var(--bg2); border: 1px solid var(--line); border-radius: 99px; padding: 6px 12px; font-size: 13px; }
+.arena-line b { color: var(--yellow); }

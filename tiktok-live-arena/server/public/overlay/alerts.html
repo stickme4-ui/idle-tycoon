@@ -13,7 +13,7 @@ import { mountAlerts, start } from '/overlay/widgets.js';
 import { params } from '/overlay/common.js';
 const root = document.getElementById('root');
 const num = (k, d) => (params.has(k) ? Number(params.get(k)) : d);
-start({ alerts: mountAlerts(root, { top: num('top', 40) }) });
+start({ alerts: mountAlerts(root, { top: num('top', 40) }), wasted: true });
 </script>
 </body>
 </html>

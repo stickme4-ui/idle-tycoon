@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
 /* Overlays are transparent and scale with the source width (designed for 1080x1920). */
 :root {
   --u: calc(100vw / 1080);
@@ -109,3 +110,51 @@ html, body { background: transparent !important; overflow: hidden; width: 100vw;
 .tier .pill.gift { background: rgba(255,255,255,.14); max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: calc(15 * var(--u)); padding: calc(6 * var(--u)) calc(6 * var(--u)); }
 .tier.hit { animation: tier-hit .8s; }
 @keyframes tier-hit { 30% { transform: translateY(calc(-16 * var(--u))) scale(1.12); filter: brightness(1.6); } }
+
+/* ================= SCOREBOARD (top) ================= */
+.score { position: absolute; left: 0; right: 0; text-align: center; font-family: 'Bangers', Impact, var(--font); letter-spacing: .04em; line-height: 1.05; pointer-events: none;
+  -webkit-text-stroke: calc(3 * var(--u)) #000; paint-order: stroke fill; text-shadow: 0 calc(4 * var(--u)) 0 #000; }
+.score > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 calc(30 * var(--u)); }
+.score .mvp { font-size: calc(44 * var(--u)); color: #facc15; }
+.score .mvp .star { color: #ef4444; }
+.score .wasted { font-size: calc(66 * var(--u)); color: #fde047; }
+.score .killed { font-size: calc(46 * var(--u)); color: #fde047; }
+.score .killed b { color: var(--kc, #ef4444); font-weight: 400; }
+.score .killed .streak { color: #fff; font-size: .7em; background: #ef4444; padding: 0 calc(10 * var(--u)); border-radius: calc(8 * var(--u)); -webkit-text-stroke: 0; margin-left: calc(8 * var(--u)); vertical-align: middle; }
+.score .kills { font-size: calc(44 * var(--u)); color: #f472b6; }
+.score .timer { font-family: var(--font); font-weight: 800; letter-spacing: 0; font-size: calc(30 * var(--u)); color: #fff; -webkit-text-stroke: 0; text-shadow: var(--shadow-text); font-variant-numeric: tabular-nums; }
+.score > div.bump { animation: score-bump .45s; }
+@keyframes score-bump { 40% { transform: scale(1.12); } }
+
+/* ================= LEADERBOARD (side) ================= */
+.lb { position: absolute; width: calc(400 * var(--u)); padding: calc(16 * var(--u)) calc(18 * var(--u)); border-radius: calc(22 * var(--u));
+  background: linear-gradient(rgba(10, 12, 20, .78), rgba(10, 12, 20, .55)); border: calc(2 * var(--u)) solid rgba(255,255,255,.18); transition: opacity .4s, transform .4s; }
+.lb.swap { opacity: 0; transform: translateX(calc(-20 * var(--u))); }
+.lb h3 { font-family: 'Bangers', Impact, var(--font); font-weight: 400; letter-spacing: .05em; font-size: calc(36 * var(--u)); color: #38bdf8; margin-bottom: calc(8 * var(--u)); -webkit-text-stroke: calc(2 * var(--u)) #000; paint-order: stroke fill; }
+.lb .row { display: flex; align-items: center; gap: calc(10 * var(--u)); font-weight: 700; font-size: calc(27 * var(--u)); padding: calc(5 * var(--u)) 0; text-shadow: var(--shadow-text); }
+.lb .row .n { width: calc(34 * var(--u)); text-align: center; font-weight: 900; }
+.lb .row img, .lb .row .ph { width: calc(40 * var(--u)); height: calc(40 * var(--u)); border-radius: 50%; object-fit: cover; flex: none; background: #444; }
+.lb .row .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb .row .v { color: #fde047; font-variant-numeric: tabular-nums; }
+.lb .row.r1 .n, .lb .row.r1 .nm { color: #facc15; }
+.lb .row.r1 img { box-shadow: 0 0 0 calc(3 * var(--u)) #facc15; }
+.lb .row.r2 .n { color: #e5e7eb; } .lb .row.r3 .n { color: #fb923c; }
+.lb .empty { font-weight: 700; font-size: calc(26 * var(--u)); opacity: .85; text-shadow: var(--shadow-text); }
+
+/* ================= WASTED / KILL CARD ================= */
+.wasted-screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(18 * var(--u));
+  background: radial-gradient(ellipse at center, rgba(0,0,0,.25), rgba(0,0,0,.65)); animation: ws 5.5s ease forwards; pointer-events: none; }
+@keyframes ws { 0% { opacity: 0; } 6% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; } }
+.wasted-screen .big { font-family: 'Bangers', Impact, var(--font); font-size: calc(170 * var(--u)); color: #dc2626; letter-spacing: .06em;
+  -webkit-text-stroke: calc(5 * var(--u)) #000; paint-order: stroke fill; text-shadow: 0 calc(10 * var(--u)) 0 #000; animation: ws-big .6s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes ws-big { from { transform: scale(2.4); opacity: 0; } }
+.kcard { display: flex; align-items: center; gap: calc(22 * var(--u)); padding: calc(18 * var(--u)) calc(30 * var(--u)) calc(18 * var(--u)) calc(18 * var(--u)); border-radius: calc(30 * var(--u));
+  background: rgba(10, 12, 20, .9); border: calc(5 * var(--u)) solid var(--kc, #ef4444); box-shadow: 0 0 calc(50 * var(--u)) var(--kc, #ef4444); animation: alert-in .6s .35s cubic-bezier(.2, 1.4, .4, 1) both; max-width: calc(980 * var(--u)); }
+.kcard .av { width: calc(140 * var(--u)); height: calc(140 * var(--u)); border-radius: 50%; object-fit: cover; border: calc(5 * var(--u)) solid var(--kc, #ef4444); background: #333; flex: none; }
+.kcard .av.ph { display: grid; place-items: center; font-weight: 900; font-size: calc(64 * var(--u)); color: #111; background: var(--kc, #ef4444); }
+.kcard .t1 { font-weight: 800; font-size: calc(30 * var(--u)); opacity: .85; letter-spacing: .08em; }
+.kcard .t2 { font-family: 'Bangers', Impact, var(--font); font-size: calc(72 * var(--u)); color: var(--kc, #ef4444); line-height: 1; -webkit-text-stroke: calc(2 * var(--u)) #000; paint-order: stroke fill; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(720 * var(--u)); }
+.kcard .t3 { font-weight: 700; font-size: calc(28 * var(--u)); margin-top: calc(6 * var(--u)); }
+.ws-extra { display: flex; flex-direction: column; align-items: center; gap: calc(8 * var(--u)); font-weight: 800; font-size: calc(34 * var(--u)); text-shadow: var(--shadow-text); animation: alert-in .5s .8s both; }
+.ws-extra .gold { color: #facc15; font-family: 'Bangers', Impact, var(--font); font-weight: 400; font-size: calc(52 * var(--u)); letter-spacing: .05em; -webkit-text-stroke: calc(2 * var(--u)) #000; paint-order: stroke fill; }
+.ws-extra .rec { color: #4ade80; }

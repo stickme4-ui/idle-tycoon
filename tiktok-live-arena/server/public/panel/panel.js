@@ -3,7 +3,7 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const fmt = (n) => Math.round(n || 0).toLocaleString('en-US');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const S = { config: null, engine: null, tiktok: null, gifts: [], gta: null, fivem: null, port: 0 };
+const S = { config: null, engine: null, tiktok: null, gifts: [], gta: null, fivem: null, boards: null, port: 0 };
 const dirty = { rules: false, tiers: false, settings: false };
 
 const FALLBACK_GIFTS = ['Rose', 'TikTok', 'Heart Me', 'Finger Heart', 'GG', 'Ice Cream Cone', 'Doughnut', 'Perfume', 'Hand Hearts', 'Hat and Mustache', 'Confetti', 'Sunglasses', 'Corgi', 'Money Gun', 'Swan', 'Galaxy', 'Lion', 'Universe'];
@@ -35,7 +35,7 @@ function connectWs() {
   ws.onmessage = (m) => {
     const { type, data } = JSON.parse(m.data);
     if (type === 'init') {
-      Object.assign(S, { config: data.config, engine: data.engine, tiktok: data.tiktok, gifts: data.gifts || [], gta: data.gta, fivem: data.fivem, port: data.port });
+      Object.assign(S, { config: data.config, engine: data.engine, tiktok: data.tiktok, gifts: data.gifts || [], gta: data.gta, fivem: data.fivem, boards: data.boards, port: data.port });
       $('#log').innerHTML = '';
       data.log.forEach(addLog);
       renderAll();
@@ -45,6 +45,7 @@ function connectWs() {
     else if (type === 'gifts') { S.gifts = data; renderGiftList(); }
     else if (type === 'config') { S.config = data; renderEditors(); }
     else if (type === 'log') addLog(data);
+    else if (type === 'boards') { S.boards = data; renderBoards(); }
   };
   ws.onclose = () => { setPill('#pill-tiktok', '', 'השרת לא פועל'); setTimeout(connectWs, 1500); };
 }
@@ -53,7 +54,7 @@ function connectWs() {
 function setPill(sel, cls, text) { const p = $(sel); p.className = 'pill ' + cls; p.querySelector('span').textContent = text; }
 
 function renderAll() {
-  renderTikTok(); renderEngine(); renderGiftList(); renderEditors(); renderOverlayLinks(); renderManual(); renderGta(S.gta); renderFiveM(S.fivem);
+  renderBoards(); renderTikTok(); renderEngine(); renderGiftList(); renderEditors(); renderOverlayLinks(); renderManual(); renderGta(S.gta); renderFiveM(S.fivem);
   if (!$('#username').value) $('#username').value = S.config.tiktok.username || '';
   if (!$('#gta-path').value) $('#gta-path').value = S.config.game.gtaPath || '';
 }
@@ -74,6 +75,7 @@ function renderEngine() {
   const e = S.engine;
   if (!e) return;
   const gname = e.game?.fivem ? 'FiveM' : 'GTA';
+  renderArena();
   setPill('#pill-game', e.game?.connected ? 'ok' : '', e.game?.connected ? `${gname}: מחובר` : 'משחק: לא מחובר');
   renderHp();
   const st = e.stats || {};
@@ -85,6 +87,27 @@ function renderEngine() {
   $('#top').innerHTML = (e.top || []).length
     ? e.top.map((u, i) => `<div class="top-row"><span>#${i + 1}</span>${u.avatar ? `<img src="${esc(u.avatar)}" referrerpolicy="no-referrer">` : '<span class="ph"></span>'}<b>${esc(u.nickname)}</b><span dir="ltr">${fmt(u.coins)} 🪙</span></div>`).join('')
     : '<p class="hint">עוד אין מתנות בלייב הזה.</p>';
+}
+
+const dur = (ms) => { const t = Math.floor((ms || 0) / 1000); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+
+function renderArena() {
+  const a = S.engine?.arena;
+  if (!a) return;
+  const k = a.lastKiller;
+  $('#arena-line').innerHTML = [
+    `מיתות: <b>${fmt(a.deaths)}</b>`, `הריגות: <b>${fmt(a.kills)}</b>`, `שיא הישרדות: <b>${dur(a.bestSurvival)}</b>`,
+    `הרג אחרון: <b>${k ? esc(k.nickname) + (a.killerStreak > 1 ? ` (x${a.killerStreak})` : '') : '—'}</b>`,
+    `MVP בחיים הנוכחיים: <b>${a.mvp ? esc(a.mvp.nickname) + ' · ' + fmt(a.mvp.dmg) : '—'}</b>`,
+  ].map((x) => `<span>${x}</span>`).join('');
+}
+
+function renderBoards() {
+  if (!S.boards) return;
+  const rows = S.boards[$('#lb-period').value]?.[$('#lb-board').value] || [];
+  $('#lb').innerHTML = rows.length
+    ? rows.map((u, i) => `<div class="top-row"><span>#${i + 1}</span>${u.avatar ? `<img src="${esc(u.avatar)}" referrerpolicy="no-referrer">` : '<span class="ph"></span>'}<b>${esc(u.nickname)}</b><span dir="ltr">${fmt(u.value)}</span></div>`).join('')
+    : '<p class="hint">עוד אין נתונים בדירוג הזה.</p>';
 }
 
 function renderHp() {
@@ -261,6 +284,9 @@ const SETTINGS = [
     ['overlay.showTiers', 'bool', 'הצג רצועת דמויות', ''],
     ['overlay.showAlerts', 'bool', 'הצג התראות מתנות', ''],
     ['overlay.alertSeconds', 'num', 'משך התראה (שנ׳)', ''],
+    ['overlay.showScoreboard', 'bool', 'לוח סטטיסטיקות עליון', 'MVP, מיתות, מי הרג אחרון, הריגות, זמן הישרדות'],
+    ['overlay.showLeaderboard', 'bool', 'טבלת דירוג בצד', 'מתחלפת: רוצחים מובילים החודש/היום, תורמים, נזק'],
+    ['overlay.leaderboardSeconds', 'num', 'זמן לכל טבלה (שנ׳)', ''],
     ['overlay.sounds', 'bool', 'צלילי אפקטים', ''],
   ]],
   ['טיקטוק ושרת', [
@@ -313,7 +339,7 @@ async function save(k) {
 // ---------- overlays ----------
 function renderOverlayLinks() {
   const base = `http://127.0.0.1:${S.port || location.port}`;
-  const links = [['הכל ביחד (מומלץ)', '/overlay/all'], ['מד חיים', '/overlay/health'], ['התראות מתנות ואפקטים', '/overlay/alerts'], ['רצועת דמויות', '/overlay/tiers']];
+  const links = [['הכל ביחד (מומלץ)', '/overlay/all'], ['מד חיים', '/overlay/health'], ['התראות, אפקטים ו-WASTED', '/overlay/alerts'], ['רצועת דמויות', '/overlay/tiers'], ['לוח סטטיסטיקות', '/overlay/scoreboard'], ['טבלת דירוג', '/overlay/leaderboard']];
   $('#overlay-links').innerHTML = links.map(([n, p]) => `<div class="link-row"><b>${n}</b><code>${base}${p}</code><button class="btn small" data-copy="${base}${p}">העתק</button><button class="btn small ghost" data-prev="${p}">תצוגה</button></div>`).join('');
   if (!$('#preview').src) $('#preview').src = '/overlay/all?sound=0';
 }
@@ -345,6 +371,10 @@ document.addEventListener('click', async (e) => {
     if (b.dataset.tab) {
       $$('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
       $$('.tab').forEach((t) => t.classList.toggle('on', t.id === 'tab-' + b.dataset.tab));
+    } else if (b.dataset.reset) {
+      if (!confirm('לאפס? אי אפשר לבטל.')) return;
+      await api('/api/board/reset', { what: b.dataset.reset });
+      toast('אופס ✔');
     } else if (b.dataset.post) {
       if (b.dataset.confirm && !confirm(b.dataset.confirm)) return;
       await api(b.dataset.post, {});
@@ -397,3 +427,5 @@ $('#gta-install').onclick = async () => {
 addEventListener('beforeunload', (e) => { if (Object.values(dirty).some(Boolean)) { e.preventDefault(); e.returnValue = ''; } });
 
 connectWs();
+
+$('#lb-period').onchange = $('#lb-board').onchange = renderBoards;

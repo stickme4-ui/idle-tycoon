@@ -14,7 +14,7 @@ local hello = true
 local baseUrl = nil
 
 -- reports accumulated from the streamer client
-local rep = { dmg = 0.0, kills = 0, alive = 0, died = false, respawn = false }
+local rep = { dmg = 0.0, kills = 0, alive = 0, died = false, respawn = false, hits = {} }
 
 -- ---------------------------------------------------------------
 -- URL resolution: Config -> convar -> server_url.txt -> default
@@ -94,7 +94,7 @@ end)
 -- ---------------------------------------------------------------
 -- Reports from the streamer client (validated + clamped)
 -- ---------------------------------------------------------------
-RegisterNetEvent('live_arena:report', function(dmg, kills, alive, died, respawn)
+RegisterNetEvent('live_arena:report', function(dmg, kills, alive, died, respawn, hits)
     local src = source
     if src ~= streamer then return end
     dmg = tonumber(dmg) or 0
@@ -105,7 +105,25 @@ RegisterNetEvent('live_arena:report', function(dmg, kills, alive, died, respawn)
     if alive >= 0 and alive <= 1000 then rep.alive = alive end
     if died == true then rep.died = true end
     if respawn == true then rep.respawn = true end
+    if type(hits) == 'table' then
+        local n = 0
+        for id, amount in pairs(hits) do
+            n = n + 1
+            if n > 64 then break end
+            id = tostring(id)
+            amount = tonumber(amount) or 0
+            if id:match('^%d+$') and #id <= 10 and amount > 0 and amount < 1000000 then
+                rep.hits[id] = (rep.hits[id] or 0) + amount
+            end
+        end
+    end
 end)
+
+local function encodeHits(hits)
+    local parts = {}
+    for id, amount in pairs(hits) do parts[#parts + 1] = ('%s:%.2f'):format(id, amount) end
+    return table.concat(parts, ',')
+end
 
 -- ---------------------------------------------------------------
 -- Poll loop
@@ -129,9 +147,10 @@ CreateThread(function()
         if streamer and not inFlight then
             -- snapshot + reset the reports
             local r = rep
-            rep = { dmg = 0.0, kills = 0, alive = r.alive, died = false, respawn = false }
-            local q = ('?v=%s&alive=%d&dmg=%.2f&kills=%d%s%s%s'):format(
-                VERSION, r.alive, r.dmg, r.kills,
+            rep = { dmg = 0.0, kills = 0, alive = r.alive, died = false, respawn = false, hits = {} }
+            local hitStr = encodeHits(r.hits)
+            local q = ('?v=%s&alive=%d&dmg=%.2f&kills=%d%s%s%s%s'):format(
+                VERSION, r.alive, r.dmg, r.kills, hitStr ~= '' and ('&hits=' .. hitStr) or '',
                 r.died and '&died=1' or '', r.respawn and '&respawn=1' or '',
                 (hello or not connected) and '&hello=1' or '')
 
@@ -153,6 +172,7 @@ CreateThread(function()
                     rep.kills = rep.kills + r.kills
                     rep.died = rep.died or r.died
                     rep.respawn = rep.respawn or r.respawn
+                    for id, amount in pairs(r.hits) do rep.hits[id] = (rep.hits[id] or 0) + amount end
                     failures = failures + 1
                     setConnected(false)
                     if failures % 5 == 0 then baseUrl = resolveUrl() end -- port may have changed

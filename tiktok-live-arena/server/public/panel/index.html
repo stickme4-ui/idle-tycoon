@@ -96,9 +96,28 @@
         <div class="log" id="log"></div>
       </div>
       <div class="card">
-        <h2>תומכים מובילים</h2>
+        <h2>תומכים מובילים (הלייב הזה)</h2>
         <div id="top"></div>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>ארנה ודירוגים</h2>
+        <div class="row wrap">
+          <select id="lb-period"><option value="day">היום</option><option value="month" selected>החודש</option><option value="all">כל הזמנים</option></select>
+          <select id="lb-board"><option value="kills">הכי הרבה הריגות</option><option value="damage">הכי הרבה נזק</option><option value="coins">הכי הרבה מטבעות</option><option value="sent">הכי הרבה אויבים שנשלחו</option></select>
+        </div>
+      </div>
+      <div class="arena-line" id="arena-line"></div>
+      <div id="lb"></div>
+      <div class="row wrap" style="margin-top:12px">
+        <button class="btn ghost small" data-reset="day">אפס דירוג יומי</button>
+        <button class="btn ghost small" data-reset="month">אפס דירוג חודשי</button>
+        <button class="btn ghost small" data-reset="alltime">אפס דירוג כל הזמנים</button>
+        <button class="btn ghost small" data-reset="arena">אפס מיתות/הריגות/שיא</button>
+      </div>
+      <p class="hint">הדירוג היומי והחודשי מתאפסים לבד ביום/חודש חדש. גם אירועי בדיקה מהסימולטור נספרים – אפס לפני לייב אמיתי.</p>
     </div>
   </section>
 

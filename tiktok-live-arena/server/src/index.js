@@ -6,6 +6,7 @@ import { exec } from 'node:child_process';
 import { WebSocketServer } from 'ws';
 import { loadConfig, saveConfig, applyPatch, SERVER_ROOT, DEFAULT_TIERS, DEFAULT_RULES } from './config.js';
 import { Engine } from './engine.js';
+import { Stats } from './stats.js';
 import { TikTokBridge } from './tiktok.js';
 import { checkGta, installMod, writeModIni, writeFiveMUrl, checkFiveM } from './installer.js';
 
@@ -19,7 +20,8 @@ const MIME = {
 let cfg = loadConfig();
 cfg = applyPatch(cfg, { tiers: cfg.tiers, rules: cfg.rules });
 
-const engine = new Engine(() => cfg);
+const board = new Stats();
+const engine = new Engine(() => cfg, board);
 const tiktok = new TikTokBridge();
 const logBuffer = [];
 
@@ -43,6 +45,7 @@ function fullState() {
     gta: checkGta(cfg.game.gtaPath),
     fivem: checkFiveM(),
     log: logBuffer.slice(-100),
+    boards: board.leaderboards(),
     port: activePort,
   };
 }
@@ -57,7 +60,10 @@ function addLog(entry) {
 engine.on('hp', (d) => broadcast('hp', d));
 engine.on('status', (d) => broadcast('engine', d));
 engine.on('alert', (d) => broadcast('alert', d));
-engine.on('ko', (d) => { broadcast('ko', d); addLog({ kind: 'system', text: 'K.O. - השחקן מת' }); });
+engine.on('ko', (d) => {
+  broadcast('ko', d);
+  addLog({ kind: 'system', text: d.killer ? `K.O. – ${d.killer.nickname} הרג אותך (${d.killer.tier})` : 'K.O. – השחקן מת' });
+});
 engine.on('revive', () => broadcast('revive', {}));
 engine.on('log', (d) => addLog(d));
 
@@ -158,8 +164,16 @@ const routes = {
   'POST /api/game/clear': async () => { engine.pushCmd('clear'); return { ok: true }; },
   'POST /api/stats/reset': async () => {
     Object.keys(engine.stats).forEach((k) => (engine.stats[k] = 0));
-    engine.kills = 0; engine.deaths = 0; engine.supporters.clear();
+    engine.supporters.clear();
     engine.emitStatus();
+    return { ok: true };
+  },
+
+  'POST /api/board/reset': async (body) => {
+    if (!['day', 'month', 'alltime', 'arena', 'all'].includes(body.what)) throw new Error('bad target');
+    board.reset(body.what);
+    engine.emitStatus();
+    broadcast('boards', board.leaderboards());
     return { ok: true };
   },
 
@@ -239,6 +253,15 @@ async function main() {
     ws.on('error', () => clients.delete(ws));
   });
   setInterval(() => broadcast('engine', engine.snapshot()), 2000).unref();
+  let boardVersion = -1;
+  setInterval(() => {
+    if (board.version === boardVersion) return;
+    boardVersion = board.version;
+    broadcast('boards', board.leaderboards());
+  }, 1500).unref();
+  const flush = () => { board.save(); process.exit(0); };
+  process.on('SIGINT', flush);
+  process.on('SIGTERM', flush);
 
   server.listen(activePort, '127.0.0.1', () => {
     const base = `http://127.0.0.1:${activePort}`;

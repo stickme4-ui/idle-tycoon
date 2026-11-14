@@ -325,10 +325,132 @@ export function mountTiers(root, { bottom = 20 } = {}) {
   };
 }
 
+// ======================= SCOREBOARD =======================
+const mmss = (ms) => { const t = Math.max(0, Math.floor(ms / 1000)); const h = Math.floor(t / 3600); const m = Math.floor((t % 3600) / 60); const sec = t % 60;
+  return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(sec).padStart(2, '0'); };
+const ago = (ms) => { const t = Math.floor(ms / 1000); return t < 60 ? `${t}s` : t < 3600 ? `${Math.floor(t / 60)}m` : `${Math.floor(t / 3600)}h`; };
+
+export function mountScoreboard(root, { top = 24 } = {}) {
+  const box = el('div', 'score');
+  box.style.top = `calc(${top} * var(--u))`;
+  box.innerHTML = `<div class="mvp"></div><div class="wasted"></div><div class="killed"></div><div class="kills"></div><div class="timer"></div>`;
+  root.appendChild(box);
+  const $ = (c) => box.querySelector('.' + c);
+  let a = null;
+  let offset = 0; // server clock offset
+  const setText = (c, html) => { const e = $(c); if (e.innerHTML !== html) { e.innerHTML = html; e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); } };
+
+  function render() {
+    if (!a) return;
+    setText('mvp', a.mvp ? `<span class="star">★★★</span> ${esc(a.mvp.nickname)} : ${fmt(a.mvp.dmg)} <span class="star">★★★</span>` : '<span class="star">★★★</span> SEND A GIFT TO BE MVP <span class="star">★★★</span>');
+    setText('wasted', `WASTED : ${fmt(a.deaths)}`);
+    if (a.lastKiller) {
+      $('killed').style.setProperty('--kc', a.lastKiller.color || '#ef4444');
+      setText('killed', `LAST KILLED BY : <b>${esc(a.lastKiller.nickname)}</b>${a.killerStreak > 1 ? `<span class="streak">x${a.killerStreak} STREAK</span>` : ''}`);
+    } else setText('killed', 'LAST KILLED BY : <b>NOBODY YET</b>');
+    setText('kills', `KILLS : ${fmt(a.kills)}`);
+    tick();
+  }
+  function tick() {
+    if (!a) return;
+    const now = Date.now() + offset;
+    $('timer').textContent = a.dead
+      ? `Last death ${ago(now - a.lastDeathAt)} ago`
+      : `Alive ${mmss(now - a.lifeStartedAt)}  ·  Best ${mmss(a.bestSurvival)}${a.lastDeathAt ? `  ·  Last death ${ago(now - a.lastDeathAt)} ago` : ''}`;
+  }
+  setInterval(tick, 1000);
+  return {
+    set(arena, serverNow) { a = arena; if (serverNow) offset = serverNow - Date.now(); render(); },
+    show(v) { box.style.display = v ? '' : 'none'; },
+  };
+}
+
+// ======================= LEADERBOARD =======================
+const MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+
+export function mountLeaderboard(root, { left = 20, bottom = 600 } = {}) {
+  const box = el('div', 'lb');
+  box.style.left = `calc(${left} * var(--u))`;
+  box.style.bottom = `calc(${bottom} * var(--u))`;
+  root.appendChild(box);
+  let data = null, idx = 0, seconds = 8, timer = 0;
+
+  function views() {
+    const month = MONTHS[Number((data.monthKey || '').slice(5, 7)) - 1] || 'MONTHLY';
+    return [
+      { title: `${month} TOP KILLERS`, rows: data.month.kills, unit: '' },
+      { title: 'TODAY\'S TOP KILLERS', rows: data.day.kills, unit: '' },
+      { title: `${month} TOP GIFTERS`, rows: data.month.coins, unit: ' 🪙' },
+      { title: 'MOST DAMAGE TODAY', rows: data.day.damage, unit: '' },
+      { title: 'ALL-TIME KILLERS', rows: data.all.kills, unit: '' },
+    ].filter((v) => v.rows.length);
+  }
+
+  function render() {
+    if (!data) return;
+    const vs = views();
+    if (!vs.length) {
+      box.innerHTML = '<h3>TOP KILLERS</h3><div class="empty">Nobody has killed me yet...<br>Send a gift and take #1!</div>';
+      return;
+    }
+    const v = vs[idx % vs.length];
+    box.innerHTML = `<h3>${esc(v.title)}</h3>` + v.rows.map((r, i) => `
+      <div class="row r${i + 1}"><span class="n">${i + 1}</span>${r.avatar ? `<img src="${esc(r.avatar)}" referrerpolicy="no-referrer">` : '<span class="ph"></span>'}
+      <span class="nm">${esc(r.nickname)}</span><span class="v">${fmt(r.value)}${v.unit}</span></div>`).join('');
+  }
+
+  function rotate() {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      box.classList.add('swap');
+      setTimeout(() => { idx++; render(); box.classList.remove('swap'); rotate(); }, 400);
+    }, seconds * 1000);
+  }
+  rotate();
+  return {
+    set(d) { data = d; render(); },
+    setSeconds(s) { seconds = s; rotate(); },
+    show(v) { box.style.display = v ? '' : 'none'; },
+  };
+}
+
+// ======================= WASTED SCREEN =======================
+function wastedScreen(d) {
+  const old = document.querySelector('.wasted-screen');
+  if (old) old.remove();
+  const k = d.killer;
+  const w = el('div', 'wasted-screen');
+  let html = '<div class="big">WASTED</div>';
+  if (k) {
+    const initial = esc((k.nickname || '?').trim().charAt(0).toUpperCase());
+    html += `<div class="kcard" style="--kc:${esc(k.color || '#ef4444')}">
+      ${k.avatar ? `<img class="av" src="${esc(k.avatar)}" referrerpolicy="no-referrer">` : `<div class="av ph">${initial}</div>`}
+      <div><div class="t1">KILLED BY</div><div class="t2">${esc(k.nickname)}</div>
+      <div class="t3">${k.tier ? `with ${esc(k.tier)} · ` : ''}${fmt(k.monthKills)} kill${k.monthKills === 1 ? '' : 's'} this month${k.streak > 1 ? ` · x${k.streak} in a row` : ''}</div></div></div>`;
+  }
+  const extra = [];
+  if (k?.newNumberOne) extra.push(`<div class="gold">👑 NEW #1 KILLER OF THE MONTH 👑</div>`);
+  else if (k?.monthRank && k.monthRank <= 5) extra.push(`<div>#${k.monthRank} on the monthly leaderboard</div>`);
+  if (d.mvp && (!k || d.mvp.nickname !== k.nickname)) extra.push(`<div>MVP: ${esc(d.mvp.nickname)} · ${fmt(d.mvp.dmg)} damage</div>`);
+  if (d.newRecord) extra.push(`<div class="rec">NEW RECORD! Survived ${mmss(d.survival)}</div>`);
+  else if (d.survival) extra.push(`<div>Survived ${mmss(d.survival)}</div>`);
+  if (extra.length) html += `<div class="ws-extra">${extra.join('')}</div>`;
+  w.innerHTML = html;
+  const av = w.querySelector('img.av');
+  if (av) av.onerror = () => av.replaceWith(Object.assign(el('div', 'av ph'), { textContent: (k.nickname || '?').charAt(0).toUpperCase() }));
+  document.body.appendChild(w);
+  w.addEventListener('animationend', (e) => { if (e.target === w) w.remove(); });
+}
+
 // ======================= WIRING =======================
-export function start({ health, alerts, tiers }) {
+export function start({ health, alerts, tiers, score, board, wasted = false }) {
   let reviveSeconds = 12;
   let showAlerts = true;
+  const applyOverlayCfg = (o) => {
+    score?.show(o.showScoreboard !== false);
+    board?.show(o.showLeaderboard !== false);
+    board?.setSeconds(o.leaderboardSeconds || 8);
+  };
   connect({
     init(s) {
       reviveSeconds = s.config.health.reviveSeconds;
@@ -339,6 +461,9 @@ export function start({ health, alerts, tiers }) {
       showAlerts = s.config.overlay.showAlerts !== false;
       tiers?.setGifts(s.gifts);
       tiers?.setConfig(s.config);
+      applyOverlayCfg(s.config.overlay);
+      score?.set(s.engine.arena);
+      board?.set(s.boards);
     },
     config(c) {
       reviveSeconds = c.health.reviveSeconds;
@@ -346,12 +471,14 @@ export function start({ health, alerts, tiers }) {
       alerts?.setSeconds(c.overlay.alertSeconds);
       showAlerts = c.overlay.showAlerts !== false;
       tiers?.setConfig(c);
+      applyOverlayCfg(c.overlay);
     },
+    boards(b) { board?.set(b); },
     gifts(g) { tiers?.setGifts(g); },
     hp(d) { health?.set(d); },
-    engine(s) { health?.stats(s); },
+    engine(s) { health?.stats(s); if (s.arena) score?.set(s.arena); },
     alert(a) { if (showAlerts) alerts?.alert(a); tiers?.hit(a.tierIndex); },
-    ko() { health?.ko(reviveSeconds); alerts?.ko(); },
+    ko(d) { health?.ko(reviveSeconds); if (wasted) wastedScreen(d || {}); else alerts?.ko(); },
     revive() { health?.revive(); alerts?.revive(); },
   });
 }

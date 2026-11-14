@@ -9,14 +9,16 @@
 <body>
 <div id="root"></div>
 <script type="module">
-import { mountHealth, mountAlerts, mountTiers, start } from '/overlay/widgets.js';
+import { mountHealth, mountAlerts, mountTiers, mountScoreboard, mountLeaderboard, start } from '/overlay/widgets.js';
 import { params } from '/overlay/common.js';
 const root = document.getElementById('root');
 const num = (k, d) => (params.has(k) ? Number(params.get(k)) : d);
 const health = mountHealth(root, { bottom: num('hp', 330) });
-const alerts = mountAlerts(root, { top: num('top', 150) });
+const alerts = mountAlerts(root, { top: num('top', 360) });
 const tiers = mountTiers(root, { bottom: num('bottom', 20) });
-start({ health, alerts, tiers });
+const score = mountScoreboard(root, { top: num('score', 24) });
+const board = mountLeaderboard(root, { left: 20, bottom: num('lb', 600) });
+start({ health, alerts, tiers, score, board, wasted: true });
 </script>
 </body>
 </html>

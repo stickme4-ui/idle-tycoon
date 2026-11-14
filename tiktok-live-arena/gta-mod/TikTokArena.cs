@@ -25,6 +25,7 @@ public class TikTokArena : Script
 
     private class Enemy
     {
+        public string Id;
         public Ped Ped;
         public float DamageMult;
         public string Name;
@@ -46,6 +47,7 @@ public class TikTokArena : Script
 
     // values reported to the server (guarded by sync)
     private float outDamage;
+    private Dictionary<string, float> outHits = new Dictionary<string, float>(); // spawn id -> damage
     private int outKills;
     private bool outRespawn;
     private bool outDied;
@@ -110,13 +112,22 @@ public class TikTokArena : Script
         {
             string query;
             float dmg; int kills; bool respawn, died, hello; int alive;
+            Dictionary<string, float> hits;
             lock (sync)
             {
                 dmg = outDamage; kills = outKills; respawn = outRespawn; died = outDied; hello = outHello; alive = outAlive;
+                hits = outHits;
                 outDamage = 0; outKills = 0; outRespawn = false; outDied = false; outHello = false;
+                outHits = new Dictionary<string, float>();
+            }
+            StringBuilder hitStr = new StringBuilder();
+            foreach (KeyValuePair<string, float> kv in hits)
+            {
+                if (hitStr.Length > 0) hitStr.Append(',');
+                hitStr.Append(kv.Key).Append(':').Append(kv.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture));
             }
             query = "?v=" + Version + "&alive=" + alive + "&dmg=" + dmg.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
-                + "&kills=" + kills + (respawn ? "&respawn=1" : "") + (died ? "&died=1" : "") + (hello || !connected ? "&hello=1" : "");
+                + "&kills=" + kills + (hitStr.Length > 0 ? "&hits=" + hitStr.ToString() : "") + (respawn ? "&respawn=1" : "") + (died ? "&died=1" : "") + (hello || !connected ? "&hello=1" : "");
             try
             {
                 HttpWebRequest req = (HttpWebRequest)WebRequest.Create(serverUrl + "/game/poll" + query);
@@ -141,7 +152,11 @@ public class TikTokArena : Script
             {
                 // Server not running yet - put the reports back so nothing is lost.
                 connected = false;
-                lock (sync) { outDamage += dmg; outKills += kills; outRespawn |= respawn; outDied |= died; outHello = true; }
+                lock (sync)
+                {
+                    outDamage += dmg; outKills += kills; outRespawn |= respawn; outDied |= died; outHello = true;
+                    foreach (KeyValuePair<string, float> kv in hits) { float v; outHits.TryGetValue(kv.Key, out v); outHits[kv.Key] = v + kv.Value; }
+                }
                 Thread.Sleep(1500);
             }
         }
@@ -237,8 +252,16 @@ public class TikTokArena : Script
         if (hp < PlayerBaseline)
         {
             float lost = PlayerBaseline - hp;
-            float mult = AttackerMultiplier(player);
-            lock (sync) { outDamage += lost * mult; }
+            Enemy attacker = FindAttacker(player);
+            float amount = lost * (attacker != null && attacker.DamageMult > 0f ? attacker.DamageMult : 1f);
+            lock (sync)
+            {
+                outDamage += amount;
+                if (attacker != null && attacker.Id.Length > 0)
+                {
+                    float v; outHits.TryGetValue(attacker.Id, out v); outHits[attacker.Id] = v + amount;
+                }
+            }
             player.Health = PlayerBaseline;
         }
         if (player.Armor > 0) player.Armor = 0;
@@ -251,19 +274,20 @@ public class TikTokArena : Script
         player.Armor = 0;
     }
 
-    private float AttackerMultiplier(Ped player)
+    // Which viewer's enemy hit us? (strongest attacker gets the credit -> kill feed & leaderboards)
+    private Enemy FindAttacker(Ped player)
     {
-        float best = 0f;
+        Enemy best = null;
         foreach (Enemy en in enemies)
         {
             if (en.Ped == null || !en.Ped.Exists()) continue;
             if (Function.Call<bool>(Hash.HAS_ENTITY_BEEN_DAMAGED_BY_ENTITY, player, en.Ped, true))
             {
-                if (en.DamageMult > best) best = en.DamageMult;
+                if (best == null || en.DamageMult > best.DamageMult) best = en;
             }
         }
         Function.Call(Hash.CLEAR_ENTITY_LAST_DAMAGE_ENTITY, player);
-        return best > 0f ? best : 1f;
+        return best;
     }
 
     // ===================================================================
@@ -379,6 +403,7 @@ public class TikTokArena : Script
         Particle("scr_rcbarry2", "scr_clown_appears", pos, 1.2f);
 
         Enemy en = new Enemy();
+        en.Id = Get(a, "id", "");
         en.Ped = ped;
         en.DamageMult = Math.Max(0f, GetFloat(a, "dmg", 1f));
         en.Name = Get(a, "name", "Enemy");
