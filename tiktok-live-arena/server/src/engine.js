@@ -331,7 +331,7 @@ export class Engine extends EventEmitter {
       for (let i = 0; i < n; i++) {
         const { tier, user } = this.queue.shift();
         out.push(['spawn', `model=${ENC(tier.model)}`, `name=${ENC(tier.name)}`, `hp=${tier.health}`, `armor=${tier.armor}`,
-          `weapon=${ENC(tier.weapon)}`, `acc=${tier.accuracy}`, `dmg=${tier.damage}`, `by=${ENC(user.nickname || user.uniqueId || '')}`].join('\t'));
+          `weapon=${ENC(tier.weapon)}`, `acc=${tier.accuracy}`, `dmg=${tier.damage}`, `by=${ENC(tagName(user))}`, `color=${ENC(tier.color)}`].join('\t'));
         this.alive++;
       }
       if (n > 0) this.lastSpawnAt = now;
@@ -343,6 +343,18 @@ export class Engine extends EventEmitter {
 }
 
 // ---------- helpers ----------
+
+// Name shown above an enemy's head in GTA. GTA's fonts only have Latin glyphs,
+// so Hebrew/emoji nicknames would render as boxes: strip unsupported characters
+// (and GTA text-formatting codes like ~r~), falling back to the @username.
+export function tagName(user = {}) {
+  if (!user.uniqueId || user.uniqueId === 'streamer') return '';
+  const clean = (s) => String(s || '').replace(/[^\x20-\x7E\u00C0-\u00FF]/g, '').replace(/[~<>\\]/g, '').replace(/\s+/g, ' ').trim();
+  const nick = clean(user.nickname);
+  const letters = (nick.match(/[A-Za-z0-9\u00C0-\u00FF]/g) || []).length;
+  const name = letters >= 2 ? nick : clean(user.uniqueId);
+  return name.slice(0, 20);
+}
 function describeEvent(ev) {
   switch (ev.kind) {
     case 'gift': return `${ev.gift?.name || 'Gift'} x${ev.count}`;

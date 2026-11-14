@@ -6,7 +6,8 @@
 local enemies = {}            -- { ped, mult, by, diedAt, counted, lastTask }
 local enemyGroup = nil
 local hideHud = true
-local nameTags = false
+local nameTags = true
+local TAG_MAX_DISTANCE = 80.0
 local spawnMin, spawnMax = 14.0, 28.0
 local wasDead = false
 local expectDeath = false
@@ -49,6 +50,16 @@ local function particle(asset, fx, pos, scale)
 end
 
 local function randf(a, b) return a + math.random() * (b - a) end
+
+-- '#a855f7' -> 168, 85, 247 (lightened a bit so names stay readable on dark scenes)
+local function hexColor(hex)
+    hex = tostring(hex or ''):gsub('#', '')
+    if #hex == 3 then hex = hex:gsub('.', '%0%0') end
+    local r, g, b = tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
+    if not (r and g and b) then return { 255, 255, 255 } end
+    local lift = function(c) return math.floor(c + (255 - c) * 0.25) end
+    return { lift(r), lift(g), lift(b) }
+end
 
 local function headingTo(from, to)
     return GetHeadingFromVector_2d(to.x - from.x, to.y - from.y)
@@ -193,7 +204,8 @@ local function spawnEnemy(a)
     enemies[#enemies + 1] = {
         ped = ped,
         mult = math.max(0.0, tonumber(a.dmg) or 1.0),
-        by = a.by or '',
+        by = (a.by or ''):sub(1, 24),
+        color = hexColor(a.color),
         diedAt = 0,
         counted = false,
         lastTask = GetGameTimer(),
@@ -380,19 +392,29 @@ CreateThread(function()
         end
 
         if nameTags then
+            local cam = GetFinalRenderedCamCoord()
+            local fov = (1.0 / GetFinalRenderedCamFov()) * 100.0
             for _, e in ipairs(enemies) do
                 if e.by ~= '' and DoesEntityExist(e.ped) and not IsEntityDead(e.ped) then
-                    local p = GetEntityCoords(e.ped)
-                    local onScreen, sx, sy = World3dToScreen2d(p.x, p.y, p.z + 1.15)
-                    if onScreen then
-                        SetTextScale(0.35, 0.35)
-                        SetTextFont(4)
-                        SetTextCentre(true)
-                        SetTextOutline()
-                        SetTextColour(255, 255, 255, 230)
-                        BeginTextCommandDisplayText('STRING')
-                        AddTextComponentSubstringPlayerName(e.by)
-                        EndTextCommandDisplayText(sx, sy)
+                    -- Head bone (SKEL_Head) so the name sits right above tall models too.
+                    local head = GetPedBoneCoords(e.ped, 31086, 0.0, 0.0, 0.0)
+                    local dist = #(head - cam)
+                    if dist < TAG_MAX_DISTANCE then
+                        local onScreen, sx, sy = World3dToScreen2d(head.x, head.y, head.z + 0.42)
+                        if onScreen then
+                            local scale = math.max(0.32, math.min(0.75, (2.2 / dist) * fov * 0.55))
+                            local alpha = dist > TAG_MAX_DISTANCE - 20.0 and math.floor(255 * (TAG_MAX_DISTANCE - dist) / 20.0) or 255
+                            SetTextScale(0.0, scale)
+                            SetTextFont(4) -- condensed GTA font, like the reference stream
+                            SetTextProportional(true)
+                            SetTextCentre(true)
+                            SetTextColour(e.color[1], e.color[2], e.color[3], alpha)
+                            SetTextOutline()
+                            SetTextDropshadow(2, 0, 0, 0, alpha)
+                            BeginTextCommandDisplayText('STRING')
+                            AddTextComponentSubstringPlayerName(e.by)
+                            EndTextCommandDisplayText(sx, sy)
+                        end
                     end
                 end
             end

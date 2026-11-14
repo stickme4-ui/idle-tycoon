@@ -55,7 +55,7 @@ export const DEFAULT_CONFIG = {
   },
   game: {
     hideHud: true,
-    nameTags: false,
+    nameTags: true,
     maxAliveEnemies: 25,
     spawnIntervalMs: 250,
     spawnDistanceMin: 14,

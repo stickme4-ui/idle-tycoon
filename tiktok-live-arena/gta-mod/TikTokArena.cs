@@ -29,6 +29,7 @@ public class TikTokArena : Script
         public float DamageMult;
         public string Name;
         public string By;
+        public Color TagColor;
         public int DiedAt;
         public bool CountedKill;
         public int LastTaskAt;
@@ -56,7 +57,8 @@ public class TikTokArena : Script
     private RelationshipGroup enemyGroup;
     private bool groupReady;
     private bool hideHud = true;
-    private bool nameTags;
+    private bool nameTags = true;
+    private const float TagMaxDistance = 80f;
     private float spawnMin = 14f, spawnMax = 28f;
     private bool wasDead;
     private bool expectDeath;
@@ -381,6 +383,8 @@ public class TikTokArena : Script
         en.DamageMult = Math.Max(0f, GetFloat(a, "dmg", 1f));
         en.Name = Get(a, "name", "Enemy");
         en.By = Get(a, "by", "");
+        if (en.By.Length > 24) en.By = en.By.Substring(0, 24);
+        en.TagColor = ParseColor(Get(a, "color", "#ffffff"));
         en.LastTaskAt = Game.GameTime;
         enemies.Add(en);
     }
@@ -475,11 +479,31 @@ public class TikTokArena : Script
 
     private void DrawTag(Ped p, Enemy en)
     {
-        Vector3 head = p.Position + new Vector3(0f, 0f, 1.15f);
-        PointF screen = GTA.UI.Screen.WorldToScreen(head);
+        // Head bone so the name sits right above tall models (Hulk, Bigfoot...) too.
+        Vector3 head = p.Bones[Bone.SkelHead].Position;
+        float dist = head.DistanceTo(GameplayCamera.Position);
+        if (dist > TagMaxDistance) return;
+        PointF screen = GTA.UI.Screen.WorldToScreen(head + new Vector3(0f, 0f, 0.42f));
         if (screen.X <= 0f && screen.Y <= 0f) return;
-        GTA.UI.TextElement t = new GTA.UI.TextElement(en.By, screen, 0.35f, Color.White, GTA.UI.Font.ChaletLondon, GTA.UI.Alignment.Center, true, true);
+        float fov = 100f / Math.Max(1f, GameplayCamera.FieldOfView);
+        float scale = Math.Max(0.32f, Math.Min(0.75f, (2.2f / Math.Max(0.5f, dist)) * fov * 0.55f));
+        int alpha = dist > TagMaxDistance - 20f ? (int)(255f * (TagMaxDistance - dist) / 20f) : 255;
+        Color c = Color.FromArgb(Math.Max(0, Math.Min(255, alpha)), en.TagColor);
+        GTA.UI.TextElement t = new GTA.UI.TextElement(en.By, screen, scale, c, GTA.UI.Font.ChaletComprimeCologne, GTA.UI.Alignment.Center, true, true);
         t.Draw();
+    }
+
+    // "#a855f7" -> color, lightened a bit so names stay readable on dark scenes.
+    private static Color ParseColor(string hex)
+    {
+        try
+        {
+            hex = hex.TrimStart('#');
+            if (hex.Length == 3) hex = new string(new[] { hex[0], hex[0], hex[1], hex[1], hex[2], hex[2] });
+            int r = Convert.ToInt32(hex.Substring(0, 2), 16), g = Convert.ToInt32(hex.Substring(2, 2), 16), b = Convert.ToInt32(hex.Substring(4, 2), 16);
+            return Color.FromArgb(r + (255 - r) / 4, g + (255 - g) / 4, b + (255 - b) / 4);
+        }
+        catch (Exception) { return Color.White; }
     }
 
     private void Airstrike(Ped player, int count)
